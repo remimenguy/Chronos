@@ -97,9 +97,20 @@ final class ChronosStore {
 
     // MARK: - Applications
 
-    func setLimit(_ limit: TimeInterval?, for app: TrackedApp) {
+    /// Définit (ou retire) la limite quotidienne. Verrou strict : une limite
+    /// déjà définie n'est modifiable qu'un mois plus tard (cf. `canEditLimit`).
+    /// L'appel est sans effet si la valeur ne change pas ou si le verrou est actif.
+    func setLimit(_ newLimit: TimeInterval?, for app: TrackedApp) {
         guard let index = data.apps.firstIndex(where: { $0.id == app.id }) else { return }
-        data.apps[index].limit = limit
+        let current = data.apps[index]
+        guard current.limit != newLimit else { return }   // aucun changement
+        guard current.canEditLimit else { return }        // verrouillé un mois
+
+        data.apps[index].limit = newLimit
+        data.apps[index].limitSetDate = (newLimit == nil) ? nil : Date()
+        // Nouvelle limite ⇒ on repart proprement, sans rallonge héritée.
+        data.apps[index].extensionUsedDate = nil
+        data.apps[index].extensionBonusSeconds = 0
         persist()
     }
 
@@ -148,14 +159,17 @@ final class ChronosStore {
     func grantShortExtension() {
         guard let app = pendingLimitApp,
               let index = data.apps.firstIndex(where: { $0.id == app.id }),
+              let limit = data.apps[index].limit,
               !data.apps[index].extensionUsedToday else {
             pendingLimitApp = nil
             return
         }
         let minutes = min(DisplayPreferences.maxExtensionMinutes, data.preferences.shortExtensionMinutes)
         let reprieve = TimeInterval(minutes * 60)
-        // Répit garanti : la nouvelle limite part de l'usage courant.
-        data.apps[index].limit = data.apps[index].usedToday + reprieve
+        // Rallonge garantissant `reprieve` au-delà de l'usage courant, sans
+        // jamais toucher à la limite configurée (qui reste verrouillée).
+        let used = data.apps[index].usedToday
+        data.apps[index].extensionBonusSeconds = max(0, used - limit) + reprieve
         data.apps[index].extensionUsedDate = Date()
         persist()
         pendingLimitApp = nil

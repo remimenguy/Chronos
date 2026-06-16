@@ -16,4 +16,12 @@ enum FrenchDate {
         )
         return raw.prefix(1).uppercased() + raw.dropFirst()
     }
+
+    /// Ex. « 17 juillet 2026 ».
+    static func longDate(_ date: Date) -> String {
+        date.formatted(
+            .dateTime.day().month(.wide).year()
+                .locale(Locale(identifier: "fr_FR"))
+        )
+    }
 }

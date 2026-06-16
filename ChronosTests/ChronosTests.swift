@@ -19,6 +19,7 @@ final class InMemoryPersistence: PersistenceControlling {
 }
 
 @MainActor
+@Suite(.serialized)
 struct ChronosStoreTests {
 
     private func makeStore() -> ChronosStore {
@@ -53,7 +54,7 @@ struct ChronosStoreTests {
         #expect(updated.isOverLimit)
     }
 
-    @Test func grantingExtensionIsCappedAtFiveMinutesFromCurrentUsage() {
+    @Test func grantingExtensionGivesFiveMinutesWithoutTouchingConfiguredLimit() {
         let store = makeStore()
         let app = store.data.apps[0]
         store.setLimit(60, for: app) // dépassement
@@ -62,7 +63,9 @@ struct ChronosStoreTests {
 
         let updated = store.data.apps.first { $0.id == app.id }!
         let cap = Double(DisplayPreferences.maxExtensionMinutes * 60)
-        #expect(updated.limit == app.usedToday + cap) // répit de 5 min depuis l'usage courant
+        #expect(updated.limit == 60)                              // limite configurée intacte
+        #expect(updated.effectiveLimit == app.usedToday + cap)    // répit de 5 min depuis l'usage
+        #expect(updated.isOverLimit == false)                    // débloqué
         #expect(updated.extensionUsedToday)
         #expect(store.pendingLimitApp == nil)
     }
@@ -73,7 +76,7 @@ struct ChronosStoreTests {
         store.setLimit(60, for: app)
         store.presentLimit(for: app)
         store.grantShortExtension()
-        let limitAfterFirst = store.data.apps.first { $0.id == app.id }!.limit
+        let bonusAfterFirst = store.data.apps.first { $0.id == app.id }!.extensionBonusSeconds
 
         // Deuxième tentative : déblocage strict, aucune nouvelle extension.
         let refreshed = store.data.apps.first { $0.id == app.id }!
@@ -81,7 +84,22 @@ struct ChronosStoreTests {
         store.grantShortExtension()
 
         let final = store.data.apps.first { $0.id == app.id }!
-        #expect(final.limit == limitAfterFirst)
+        #expect(final.extensionBonusSeconds == bonusAfterFirst)
+    }
+
+    @Test func limitIsLockedForOneMonthAfterBeingSet() {
+        let store = makeStore()
+        let app = store.data.apps[0]
+
+        store.setLimit(TimeInterval(30 * 60), for: app)
+        let afterSet = store.data.apps.first { $0.id == app.id }!
+        #expect(afterSet.limit == TimeInterval(30 * 60))
+        #expect(afterSet.canEditLimit == false) // verrouillée immédiatement
+
+        // Tentative de modification immédiate : refusée.
+        store.setLimit(TimeInterval(10 * 60), for: afterSet)
+        let stillLocked = store.data.apps.first { $0.id == app.id }!
+        #expect(stillLocked.limit == TimeInterval(30 * 60)) // inchangée
     }
 
     @Test func builtInQuotesIncludeVictorHugo() {
@@ -165,6 +183,20 @@ struct TrackedAppTests {
 
         app.extensionUsedDate = Date()
         #expect(app.extensionUsedToday == true)
+    }
+
+    @Test func limitBecomesEditableAfterOneMonth() {
+        let calendar = Calendar.current
+        let overAMonthAgo = calendar.date(byAdding: .day, value: -32, to: Date())!
+        let recent = calendar.date(byAdding: .day, value: -3, to: Date())!
+
+        var app = TrackedApp(name: "Test", symbolName: "star", tintHex: 0,
+                             category: .autre, usedToday: 0, limit: 3600,
+                             limitSetDate: overAMonthAgo)
+        #expect(app.canEditLimit == true)
+
+        app.limitSetDate = recent
+        #expect(app.canEditLimit == false)
     }
 }
 

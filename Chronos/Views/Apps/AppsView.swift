@@ -74,7 +74,8 @@ struct AppsView: View {
     private func subtitle(for app: TrackedApp) -> String {
         guard app.isTracked else { return "Non suivie" }
         guard let limit = app.limit else { return "Aucune limite" }
-        if app.isOverLimit { return "Limite atteinte · \(DurationFormatter.short(limit))" }
-        return "Limite \(DurationFormatter.short(limit))"
+        let lock = app.canEditLimit ? "" : " · verrouillée"
+        if app.isOverLimit { return "Limite atteinte · \(DurationFormatter.short(limit))" + lock }
+        return "Limite \(DurationFormatter.short(limit))" + lock
     }
 }

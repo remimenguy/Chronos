@@ -33,7 +33,10 @@ struct AppLimitEditorView: View {
                 VStack(alignment: .leading, spacing: Space.xl) {
                     appHeader
                     trackingToggle
-                    if isTracked { limitSection }
+                    if isTracked {
+                        if app.canEditLimit { limitSection }
+                        else { lockedLimitSection }
+                    }
                 }
                 .padding(.horizontal, Space.screen)
                 .padding(.top, Space.m)
@@ -98,8 +101,34 @@ struct AppLimitEditorView: View {
 
             if hasLimit {
                 limitPicker
+                Text("Une fois définie, la limite ne pourra être modifiée qu'un mois plus tard.")
+                    .font(ChronosFont.caption)
+                    .foregroundStyle(ChronosColor.textTertiary)
+                    .lineSpacing(3)
             }
         }
+    }
+
+    /// Limite verrouillée : lecture seule + date de déverrouillage.
+    private var lockedLimitSection: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack {
+                Text("Limite quotidienne")
+                    .font(ChronosFont.label)
+                    .foregroundStyle(ChronosColor.textPrimary)
+                Spacer()
+                Text(app.limit.map { DurationFormatter.short($0) } ?? "Aucune")
+                    .font(ChronosFont.label)
+                    .foregroundStyle(ChronosColor.textSecondary)
+            }
+            if let unlock = app.limitUnlockDate {
+                Text("Limite verrouillée. Modifiable à partir du \(FrenchDate.longDate(unlock)).")
+                    .font(ChronosFont.caption)
+                    .foregroundStyle(ChronosColor.textSecondary)
+                    .lineSpacing(3)
+            }
+        }
+        .chronosCard()
     }
 
     private var limitPicker: some View {
