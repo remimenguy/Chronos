@@ -143,16 +143,20 @@ final class ChronosStore {
         pendingLimitApp = nil
     }
 
-    /// Accorde une extension courte : repousse la limite de l'app concernée.
+    /// Accorde l'extension unique du jour : un répit court (5 min max) à partir
+    /// de l'usage actuel. Déblocage strict — une seule fois par jour et par app.
     func grantShortExtension() {
         guard let app = pendingLimitApp,
-              let index = data.apps.firstIndex(where: { $0.id == app.id }) else {
+              let index = data.apps.firstIndex(where: { $0.id == app.id }),
+              !data.apps[index].extensionUsedToday else {
             pendingLimitApp = nil
             return
         }
-        let extra = TimeInterval(data.preferences.shortExtensionMinutes * 60)
-        let base = data.apps[index].limit ?? data.apps[index].usedToday
-        data.apps[index].limit = base + extra
+        let minutes = min(DisplayPreferences.maxExtensionMinutes, data.preferences.shortExtensionMinutes)
+        let reprieve = TimeInterval(minutes * 60)
+        // Répit garanti : la nouvelle limite part de l'usage courant.
+        data.apps[index].limit = data.apps[index].usedToday + reprieve
+        data.apps[index].extensionUsedDate = Date()
         persist()
         pendingLimitApp = nil
     }

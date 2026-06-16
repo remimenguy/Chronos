@@ -45,6 +45,18 @@ enum QuoteProvider {
         Quote(text: "Il faut savoir s'arrêter pour mieux avancer.",
               author: "Anonyme", isBuiltIn: true),
         Quote(text: "Le vrai luxe, c'est le temps.",
-              author: "Anonyme", isBuiltIn: true)
+              author: "Anonyme", isBuiltIn: true),
+
+        // Victor Hugo
+        Quote(text: "Le futur a plusieurs noms. Pour les faibles, il est l'inaccessible. Pour les craintifs, il est l'inconnu. Pour les vaillants, il est la chance.",
+              author: "Victor Hugo", isBuiltIn: true),
+        Quote(text: "Chaque homme dans sa nuit s'en va vers sa lumière.",
+              author: "Victor Hugo", isBuiltIn: true),
+        Quote(text: "Ceux qui vivent, ce sont ceux qui luttent.",
+              author: "Victor Hugo", isBuiltIn: true),
+        Quote(text: "Le plus lourd fardeau, c'est d'exister sans vivre.",
+              author: "Victor Hugo", isBuiltIn: true),
+        Quote(text: "La vie est une fleur dont l'amour est le miel.",
+              author: "Victor Hugo", isBuiltIn: true)
     ]
 }

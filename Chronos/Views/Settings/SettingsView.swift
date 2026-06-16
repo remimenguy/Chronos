@@ -80,12 +80,12 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: Space.s) {
                     settingLabel("Durée d'une extension",
-                                 "Temps accordé depuis l'écran de limite.")
+                                 "Déblocage unique, 5 minutes maximum.")
                     Stepper(
                         "\(prefs.wrappedValue.shortExtensionMinutes) minutes",
                         value: prefs.shortExtensionMinutes,
-                        in: 5...30,
-                        step: 5
+                        in: 1...DisplayPreferences.maxExtensionMinutes,
+                        step: 1
                     )
                     .font(ChronosFont.caption)
                     .tint(ChronosColor.accent)

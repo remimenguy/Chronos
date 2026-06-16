@@ -15,7 +15,9 @@ struct LimitReachedView: View {
     @State private var quote: Quote = Quote(text: "", author: nil)
     @State private var appeared = false
 
-    private var extensionMinutes: Int { store.data.preferences.shortExtensionMinutes }
+    private var extensionMinutes: Int {
+        min(DisplayPreferences.maxExtensionMinutes, store.data.preferences.shortExtensionMinutes)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -82,10 +84,11 @@ struct LimitReachedView: View {
 
     private var actions: some View {
         VStack(spacing: Space.s) {
+            // Bouton principal : on sort de l'application bloquée.
             Button {
                 store.dismissLimit()
             } label: {
-                Text("Fermer")
+                Text("OK")
                     .font(ChronosFont.button)
                     .foregroundStyle(ChronosColor.deep)
                     .frame(maxWidth: .infinity)
@@ -94,14 +97,22 @@ struct LimitReachedView: View {
                     .clipShape(RoundedRectangle(cornerRadius: Space.corner, style: .continuous))
             }
 
-            Button {
-                store.grantShortExtension()
-            } label: {
-                Text("M'accorder \(extensionMinutes) minutes")
-                    .font(ChronosFont.button)
+            // Déblocage strict : une seule extension de 5 min max par jour.
+            if app.extensionUsedToday {
+                Text("Extension déjà utilisée aujourd'hui")
+                    .font(ChronosFont.caption)
                     .foregroundStyle(ChronosColor.deepSecondary)
-                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
+            } else {
+                Button {
+                    store.grantShortExtension()
+                } label: {
+                    Text("M'accorder \(extensionMinutes) minutes, une seule fois")
+                        .font(ChronosFont.button)
+                        .foregroundStyle(ChronosColor.deepSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                }
             }
         }
     }

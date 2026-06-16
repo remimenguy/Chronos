@@ -22,6 +22,9 @@ struct TrackedApp: Identifiable, Codable, Hashable {
     var limit: TimeInterval?
     /// L'app est-elle prise en compte dans le suivi et les blocages.
     var isTracked: Bool
+    /// Date de la dernière extension accordée. Le déblocage est strict : une
+    /// seule fois **par jour** (cf. `extensionUsedToday`). `nil` = jamais utilisé.
+    var extensionUsedDate: Date?
 
     init(
         id: UUID = UUID(),
@@ -31,7 +34,8 @@ struct TrackedApp: Identifiable, Codable, Hashable {
         category: AppCategory,
         usedToday: TimeInterval,
         limit: TimeInterval? = nil,
-        isTracked: Bool = true
+        isTracked: Bool = true,
+        extensionUsedDate: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -41,11 +45,18 @@ struct TrackedApp: Identifiable, Codable, Hashable {
         self.usedToday = usedToday
         self.limit = limit
         self.isTracked = isTracked
+        self.extensionUsedDate = extensionUsedDate
     }
 
     // MARK: - Valeurs dérivées
 
     var hasLimit: Bool { limit != nil }
+
+    /// L'extension du jour a-t-elle déjà été consommée (réinitialisée chaque jour).
+    var extensionUsedToday: Bool {
+        guard let date = extensionUsedDate else { return false }
+        return Calendar.current.isDateInToday(date)
+    }
 
     /// Avancement vis-à-vis de la limite (0…1+), 0 si pas de limite.
     var progress: Double {

@@ -53,17 +53,40 @@ struct ChronosStoreTests {
         #expect(updated.isOverLimit)
     }
 
-    @Test func grantingExtensionRaisesLimitAndClearsPending() {
+    @Test func grantingExtensionIsCappedAtFiveMinutesFromCurrentUsage() {
+        let store = makeStore()
+        let app = store.data.apps[0]
+        store.setLimit(60, for: app) // dépassement
+        store.presentLimit(for: app)
+        store.grantShortExtension()
+
+        let updated = store.data.apps.first { $0.id == app.id }!
+        let cap = Double(DisplayPreferences.maxExtensionMinutes * 60)
+        #expect(updated.limit == app.usedToday + cap) // répit de 5 min depuis l'usage courant
+        #expect(updated.extensionUsedToday)
+        #expect(store.pendingLimitApp == nil)
+    }
+
+    @Test func extensionCanOnlyBeGrantedOncePerDay() {
         let store = makeStore()
         let app = store.data.apps[0]
         store.setLimit(60, for: app)
         store.presentLimit(for: app)
         store.grantShortExtension()
+        let limitAfterFirst = store.data.apps.first { $0.id == app.id }!.limit
 
-        let updated = store.data.apps.first { $0.id == app.id }!
-        let expected = 60 + Double(store.data.preferences.shortExtensionMinutes * 60)
-        #expect(updated.limit == expected)
-        #expect(store.pendingLimitApp == nil)
+        // Deuxième tentative : déblocage strict, aucune nouvelle extension.
+        let refreshed = store.data.apps.first { $0.id == app.id }!
+        store.presentLimit(for: refreshed)
+        store.grantShortExtension()
+
+        let final = store.data.apps.first { $0.id == app.id }!
+        #expect(final.limit == limitAfterFirst)
+    }
+
+    @Test func builtInQuotesIncludeVictorHugo() {
+        let store = makeStore()
+        #expect(store.data.quotes.contains { $0.author == "Victor Hugo" })
     }
 
     @Test func resetRestoresDemoStateAndOnboarding() {
@@ -127,6 +150,21 @@ struct DowntimeLogicTests {
         let schedule = DowntimeSchedule(days: [.monday])
         let wednesday23h = date(weekday: 4, hour: 23, minute: 0)
         #expect(schedule.isActive(at: wednesday23h) == false)
+    }
+}
+
+struct TrackedAppTests {
+
+    @Test func extensionResetsTheNextDay() {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        var app = TrackedApp(name: "Test", symbolName: "star", tintHex: 0,
+                             category: .autre, usedToday: 100, limit: 60,
+                             extensionUsedDate: yesterday)
+        // Extension d'hier : à nouveau disponible aujourd'hui.
+        #expect(app.extensionUsedToday == false)
+
+        app.extensionUsedDate = Date()
+        #expect(app.extensionUsedToday == true)
     }
 }
 
